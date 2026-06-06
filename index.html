@@ -10,15 +10,15 @@
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow" id="dashboardMode">月曜チェック / 今週の予想</p>
-          <h1>保有株チェック</h1>
+          <p class="eyebrow" id="dashboardMode">毎朝チェック</p>
+          <h1 id="dashboardTitle">保有株チェック</h1>
         </div>
         <div class="meta-panel" aria-label="表示情報">
           <span id="dashboardDate">--</span>
           <strong id="targetCount">0銘柄</strong>
         </div>
       </header>
-      <div class="data-status" id="dataStatus" aria-live="polite">
+      <div class="data-status" id="dataStatus" aria-live="polite" hidden>
         データ取得元：確認中
       </div>
       <nav class="tabs" id="tabs" aria-label="表示タブ"></nav>
