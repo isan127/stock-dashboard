@@ -134,3 +134,19 @@ python3 -m http.server 8000
 
 5. ブラウザで `http://localhost:8000` を開く
 6. 全体 / 村田製作所 / ソフトバンクG / トヨタ のタブが切り替わるか確認する
+
+## 反映されないときの確認手順
+
+GoogleスプレッドシートやApps Script側では更新されているのに、GitHub Pages側のダッシュボードに古い銘柄名が出る場合は、以下を確認してください。
+
+1. GitHub Pagesの `/config.js?v=数字` を直接開き、`USE_REMOTE_DATA=true` になっているか確認する
+2. `REMOTE_DATA_URL` にApps ScriptのWeb App URLが入っているか確認する
+3. Apps Script URLを直接開き、JSON内の銘柄名が更新されているか確認する
+4. GitHub Pagesのダッシュボードを `?v=数字` 付きで開き直す
+5. 画面上部の `データ取得元` を確認する
+6. `データ取得元：Remote JSON` ならremote JSONを表示しています
+7. `データ取得元：Local data.json` ならremote設定が無効、またはURL未設定です
+8. `データ取得元：Remote失敗 → Local fallback` ならremote取得に失敗し、`data.json` を表示しています
+9. ブラウザの開発者ツールのConsoleで `Loaded remote data:` または `Loaded local data.json` のログを確認する
+
+remote取得に失敗した場合は、画面にも `Remote JSONの取得に失敗したため、data.jsonを表示しています` と表示されます。
