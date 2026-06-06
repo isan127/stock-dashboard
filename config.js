@@ -1,4 +1,4 @@
 window.STOCK_DASHBOARD_CONFIG = {
-  USE_REMOTE_DATA: false,
+  USE_REMOTE_DATA: true,
   REMOTE_DATA_URL: "https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnRj4izp-8TrAr6xFT4-Byw11lbfKGhyDufKbnq_HygtpTvpdvWgfLY81iwdmRmDHTRGFix0d6oNtvIVw7v_XvKVUVPWsb-WWYxuWrE01c0qhRZ1b_EX7pKkqABDjbZ-hQpIxkxjo2WAsCpVXSoYWBRFFBn4guSx7q0_dIPCSDJ-fk70Gvuo28hCK23hazkJ2SiH5QoHyDwBW4pD71M_1zir4ceS0opLYsSHa-MKUDeYV-fYsAHg0-Xi5HwgbPZAtbOrUtKv86CVPDbKWeI&lib=MDqwx6VIjmTXhXh61i2rXbujansZJAlqE"
 };
