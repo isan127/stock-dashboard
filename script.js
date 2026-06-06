@@ -12,7 +12,6 @@ const SCOPE_OPTIONS = [
   { id: "overall", label: "全体" },
   { id: "individual", label: "個別" }
 ];
-
 const PERIOD_OPTIONS = [
   { id: "daily", label: "日次" },
   { id: "weekly", label: "週次" },
@@ -20,14 +19,9 @@ const PERIOD_OPTIONS = [
 ];
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const loadResult = await loadDashboardData();
-  dashboardData = loadResult.data;
-  dataSourceInfo = {
-    label: loadResult.sourceLabel,
-    warning: loadResult.warning
-  };
-
-  logDataDiagnostics(dashboardData);
+  const result = await loadDashboardData();
+  dashboardData = result.data;
+  dataSourceInfo = { label: result.sourceLabel, warning: result.warning };
   renderDataStatus();
 
   if (!dashboardData) {
@@ -37,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const stocks = getStocks();
   state.currentStockCode = stocks[0]?.code || "";
+  logDataDiagnostics(dashboardData);
   render();
 });
 
@@ -71,11 +66,7 @@ async function loadDashboardData() {
           };
         } catch (localError) {
           console.error("data.json load failed after remote fallback", localError);
-          return {
-            data: null,
-            sourceLabel: "読み込み失敗",
-            warning: "Remote JSON、JSONP、data.jsonのすべてを読み込めませんでした"
-          };
+          return { data: null, sourceLabel: "読み込み失敗", warning: "データを読み込めませんでした" };
         }
       }
     }
@@ -87,43 +78,35 @@ async function loadDashboardData() {
     return { data, sourceLabel: "Local data.json", warning: "" };
   } catch (error) {
     console.error("data.json load failed", error);
-    return {
-      data: null,
-      sourceLabel: "読み込み失敗",
-      warning: "data.jsonを読み込めませんでした"
-    };
+    return { data: null, sourceLabel: "読み込み失敗", warning: "data.jsonを読み込めませんでした" };
   }
 }
 
 async function fetchJson(url) {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error(`${url}: ${response.status}`);
-  return await response.json();
+  return response.json();
 }
 
 function loadRemoteJsonp(url) {
   return new Promise((resolve, reject) => {
     const callbackName = `__stockDashboardJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement("script");
-    let finished = false;
+    let done = false;
 
     const cleanup = () => {
       delete window[callbackName];
-      if (script.parentNode) script.parentNode.removeChild(script);
+      script.remove();
     };
-
-    const finish = (handler, value) => {
-      if (finished) return;
-      finished = true;
-      window.clearTimeout(timer);
+    const finish = (fn, value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
       cleanup();
-      handler(value);
+      fn(value);
     };
 
-    const timer = window.setTimeout(() => {
-      finish(reject, new Error("JSONP request timed out"));
-    }, 10000);
-
+    const timer = setTimeout(() => finish(reject, new Error("JSONP request timed out")), 10000);
     window[callbackName] = (data) => finish(resolve, data);
     script.onerror = () => finish(reject, new Error("JSONP script load failed"));
     script.src = withParams(url, { callback: callbackName, t: Date.now() });
@@ -144,24 +127,28 @@ function withParams(url, params) {
 
 function render() {
   const stocks = getStocks();
+  if (!state.currentPeriod) state.currentPeriod = "daily";
   if (!state.currentStockCode && stocks.length) state.currentStockCode = stocks[0].code;
 
-  document.getElementById("dashboardTitle").textContent = "保有株チェック";
-  document.getElementById("dashboardMode").textContent = getModeLabel();
-  document.getElementById("dashboardDate").textContent = textValue(dashboardData.meta?.date, "--");
-  document.getElementById("targetCount").textContent = `${stocks.length}銘柄`;
-
+  setText("dashboardTitle", "保有株チェック");
+  setText("dashboardMode", getModeLabel());
+  setText("dashboardDate", textValue(dashboardData?.meta?.date, "--"));
+  setText("targetCount", `${stocks.length}銘柄`);
   renderNavigation(stocks);
 
-  const content = document.getElementById("content");
   const stock = stocks.find((item) => String(item.code) === String(state.currentStockCode)) || stocks[0];
+  const content = document.getElementById("content");
 
-  if (state.currentScope === "overall" && state.currentPeriod === "daily") content.innerHTML = renderOverallDaily(stocks);
-  if (state.currentScope === "overall" && state.currentPeriod === "weekly") content.innerHTML = renderOverallWeekly(stocks);
-  if (state.currentScope === "overall" && state.currentPeriod === "monthly") content.innerHTML = renderOverallMonthly(stocks);
-  if (state.currentScope === "individual" && state.currentPeriod === "daily") content.innerHTML = stock ? renderIndividualDaily(stock) : renderEmpty("日次データがありません");
-  if (state.currentScope === "individual" && state.currentPeriod === "weekly") content.innerHTML = stock ? renderIndividualWeekly(stock) : renderEmpty("週次レビューはまだありません");
-  if (state.currentScope === "individual" && state.currentPeriod === "monthly") content.innerHTML = stock ? renderIndividualMonthly(stock) : renderEmpty("月次データはまだありません");
+  if (state.currentScope === "overall") {
+    if (state.currentPeriod === "daily") content.innerHTML = renderOverallDaily(stocks);
+    if (state.currentPeriod === "weekly") content.innerHTML = renderOverallWeekly(stocks);
+    if (state.currentPeriod === "monthly") content.innerHTML = renderOverallMonthly(stocks);
+    return;
+  }
+
+  if (state.currentPeriod === "daily") content.innerHTML = stock ? renderIndividualDaily(stock) : renderEmpty("日次データがありません");
+  if (state.currentPeriod === "weekly") content.innerHTML = stock ? renderIndividualWeekly(stock) : renderEmpty("週次レビューはまだありません");
+  if (state.currentPeriod === "monthly") content.innerHTML = stock ? renderIndividualMonthly(stock) : renderEmpty("月次データはまだありません");
 }
 
 function renderNavigation(stocks) {
@@ -171,7 +158,7 @@ function renderNavigation(stocks) {
   const stockTabs = document.getElementById("stockTabs");
   stockTabs.hidden = state.currentScope !== "individual";
   stockTabs.innerHTML = stocks.map((stock) => `
-    <button class="stock-tab" type="button" aria-selected="${stock.code === state.currentStockCode}" data-stock="${escapeAttribute(stock.code)}">
+    <button class="stock-tab" type="button" aria-selected="${String(stock.code) === String(state.currentStockCode)}" data-stock="${escapeAttribute(stock.code)}">
       ${escapeHtml(stock.shortName || stock.name)}
     </button>
   `).join("");
@@ -180,9 +167,7 @@ function renderNavigation(stocks) {
     button.addEventListener("click", () => {
       state.currentScope = button.dataset.scope;
       if (!state.currentPeriod) state.currentPeriod = "daily";
-      if (state.currentScope === "individual" && !state.currentStockCode && stocks.length) {
-        state.currentStockCode = stocks[0].code;
-      }
+      if (state.currentScope === "individual" && !state.currentStockCode && stocks.length) state.currentStockCode = stocks[0].code;
       render();
     });
   });
@@ -212,18 +197,12 @@ function renderTab(option, activeValue, key) {
 
 function renderOverallDaily(stocks) {
   const summary = getSummary(stocks);
-  const cautionStocks = stocks.filter((stock) => isCautionStock(stock));
+  const cautionStocks = stocks.filter(isCautionStock);
   const watchPoints = uniqueList(stocks.flatMap((stock) => normalizeList(stock.watchPoints))).slice(0, 5);
   const triggers = uniqueList(stocks.flatMap((stock) => normalizeList(stock.policyTriggers || stock.triggers))).slice(0, 5);
 
   return [
-    renderHeroCard({
-      icon: "shield",
-      tone: summary.actionTone,
-      title: "対応の必要性",
-      result: summary.actionRequired,
-      body: summary.reason
-    }),
+    renderHeroCard("shield", summary.actionTone, "対応の必要性", summary.actionRequired, summary.reason),
     renderInfoCard("scale", "現在の結論", summary.overallPolicy, renderChipRow(cautionStocks.map((stock) => stock.name), "red", "要注意銘柄なし")),
     cautionStocks.length ? renderInfoCard("alert", "要注意銘柄", "", renderChipRow(cautionStocks.map((stock) => stock.name), "red")) : "",
     renderStockSummaryCard(stocks, "銘柄サマリー"),
@@ -234,35 +213,19 @@ function renderOverallDaily(stocks) {
 
 function renderOverallWeekly(stocks) {
   const reviews = getWeeklyReviews();
-  const summary = getWeeklySummary(stocks, reviews);
-  const watchPoints = uniqueList(reviews.flatMap((review) => [
-    field(review, ["nextImprovement", "nextImprovePoints", "次回に活かす点"]),
-    field(review, ["provisionalNextPolicy", "nextWeekPolicy", "来週に向けた暫定方針"])
-  ])).slice(0, 5);
-
+  const lowMatch = reviews.some((review) => field(review, ["matchLevel", "一致度"], "").includes("低"));
+  const result = reviews.length ? (lowMatch ? "来週は要注意" : "様子見継続") : "週次レビューはまだありません";
+  const body = reviews.length ? "週次レビューの一致度と来週方針を確認します。" : "週次レビュー表示データが入ると、ここに要約が表示されます。";
   return [
-    renderHeroCard({
-      icon: "target",
-      tone: summary.actionTone,
-      title: "対応の必要性",
-      result: summary.actionRequired,
-      body: summary.reason
-    }),
+    renderHeroCard("target", lowMatch ? "orange" : "green", "対応の必要性", result, body),
     renderStockWeeklySummaryCard(stocks, reviews),
-    watchPoints.length ? renderListCard("lightbulb", "次回に活かす点", watchPoints, "green") : renderEmpty("週次レビューはまだありません"),
-    renderListCard("flag", "来週に向けた暫定方針", uniqueList(reviews.map((review) => field(review, ["provisionalNextPolicy", "nextWeekPolicy", "来週に向けた暫定方針"]))).slice(0, 5), "orange")
+    reviews.length ? renderListCard("lightbulb", "次回に活かす点", uniqueList(reviews.flatMap((review) => [field(review, ["nextImprovement", "nextImprovePoints", "次回に活かす点"], ""), field(review, ["provisionalNextPolicy", "nextWeekPolicy", "来週に向けた暫定方針"], "")])).slice(0, 5), "green") : ""
   ].filter(Boolean).join("");
 }
 
 function renderOverallMonthly(stocks) {
   return [
-    renderHeroCard({
-      icon: "flag",
-      tone: "neutral",
-      title: "月次まとめ",
-      result: "月次データはまだありません",
-      body: "月次表示用データが整うまで、ここには簡易メッセージだけを表示します。"
-    }),
+    renderHeroCard("flag", "neutral", "月次まとめ", "月次データはまだありません", "月次表示用データが整うまで、ここには簡易メッセージだけを表示します。"),
     renderStockSummaryCard(stocks, "日次ベースの銘柄一覧")
   ].join("");
 }
@@ -275,13 +238,7 @@ function renderIndividualDaily(stock) {
 
   return [
     renderStockHeader(stock),
-    renderHeroCard({
-      icon: "shield",
-      tone: toneForAction(actionRequired(stock)),
-      title: "対応の必要性",
-      result: actionRequired(stock),
-      body: field(stock, ["todayJudgement", "decisionText", "judgement", "今日時点の判断"], field(stock, ["oneLine", "summaryComment", "一言"], ""))
-    }),
+    renderHeroCard("shield", toneForAction(actionRequired(stock)), "対応の必要性", actionRequired(stock), field(stock, ["todayJudgement", "decisionText", "judgement", "今日時点の判断"], field(stock, ["oneLine", "summaryComment", "一言"], ""))),
     renderMetricCard("chart", "株価サマリー", [
       ["株価", formatPrice(stock.price)],
       ["前日比", formatChange(stock.change, stock.changeRate)],
@@ -298,29 +255,14 @@ function renderIndividualDaily(stock) {
 
 function renderIndividualWeekly(stock) {
   const reviews = getWeeklyReviewsForStock(stock);
-  if (!reviews.length) {
-    return [
-      renderStockHeader(stock),
-      renderEmpty("週次レビューはまだありません")
-    ].join("");
-  }
-
-  return [
-    renderStockHeader(stock),
-    ...reviews.map((review) => renderReviewDetailCard(review))
-  ].join("");
+  if (!reviews.length) return [renderStockHeader(stock), renderEmpty("週次レビューはまだありません")].join("");
+  return [renderStockHeader(stock), ...reviews.map(renderReviewDetailCard)].join("");
 }
 
 function renderIndividualMonthly(stock) {
   return [
     renderStockHeader(stock),
-    renderHeroCard({
-      icon: "flag",
-      tone: "neutral",
-      title: "月次評価",
-      result: "月次データはまだありません",
-      body: "月次表示用データが整うまで、空の項目は表示しません。"
-    })
+    renderHeroCard("flag", "neutral", "月次評価", "月次データはまだありません", "月次表示用データが整うまで、空の項目は表示しません。")
   ].join("");
 }
 
@@ -342,11 +284,11 @@ function renderStockHeader(stock) {
   `;
 }
 
-function renderHeroCard({ icon, tone, title, result, body }) {
+function renderHeroCard(iconName, tone, title, result, body) {
   return `
     <section class="card hero-card">
       <div class="card-header">
-        ${iconBadge(icon, tone)}
+        ${iconBadge(iconName, tone)}
         <div>
           <h2>${escapeHtml(title)}</h2>
           <p class="hero-result">${escapeHtml(textValue(result, "未設定"))}</p>
@@ -361,10 +303,7 @@ function renderInfoCard(iconName, title, body, extra = "") {
   if (!hasValue(body) && !hasValue(extra)) return "";
   return `
     <section class="card">
-      <div class="card-header">
-        ${iconBadge(iconName)}
-        <h2>${escapeHtml(title)}</h2>
-      </div>
+      <div class="card-header">${iconBadge(iconName)}<h2>${escapeHtml(title)}</h2></div>
       ${hasValue(body) ? `<p class="compact-text">${escapeHtml(body)}</p>` : ""}
       ${extra || ""}
     </section>
@@ -376,13 +315,8 @@ function renderMetricCard(iconName, title, rows) {
   if (!filtered.length) return "";
   return `
     <section class="card">
-      <div class="card-header">
-        ${iconBadge(iconName)}
-        <h2>${escapeHtml(title)}</h2>
-      </div>
-      <div class="metric-grid">
-        ${filtered.map(([label, value]) => renderMetric(label, value)).join("")}
-      </div>
+      <div class="card-header">${iconBadge(iconName)}<h2>${escapeHtml(title)}</h2></div>
+      <div class="metric-grid">${filtered.map(([label, value]) => renderMetric(label, value)).join("")}</div>
     </section>
   `;
 }
@@ -391,19 +325,13 @@ function renderStockSummaryCard(stocks, title) {
   if (!stocks.length) return renderEmpty("日次データがありません");
   return `
     <section class="card">
-      <div class="card-header">
-        ${iconBadge("chart")}
-        <h2>${escapeHtml(title)}</h2>
-      </div>
+      <div class="card-header">${iconBadge("chart")}<h2>${escapeHtml(title)}</h2></div>
       <div>
         ${stocks.map((stock) => `
           <article class="stock-row">
             <div>
-              <div class="stock-row-title">
-                ${escapeHtml(stock.name)}
-                ${renderChip(conclusion(stock), toneForConclusion(conclusion(stock)))}
-              </div>
-              <p class="footer-note">${escapeHtml(textValue(field(stock, ["oneLine", "summaryComment", "一言"], ""), field(stock, ["code"], "")))}</p>
+              <div class="stock-row-title">${escapeHtml(stock.name)}${renderChip(conclusion(stock), toneForConclusion(conclusion(stock)))}</div>
+              <p class="footer-note">${escapeHtml(textValue(field(stock, ["oneLine", "summaryComment", "一言"], ""), stock.code || ""))}</p>
             </div>
             <div class="stock-price">
               ${escapeHtml(formatPrice(stock.price))}
@@ -420,10 +348,7 @@ function renderStockWeeklySummaryCard(stocks, reviews) {
   if (!reviews.length) return renderEmpty("週次レビューはまだありません");
   return `
     <section class="card">
-      <div class="card-header">
-        ${iconBadge("target")}
-        <h2>銘柄サマリー</h2>
-      </div>
+      <div class="card-header">${iconBadge("target")}<h2>銘柄サマリー</h2></div>
       <div class="review-grid">
         ${reviews.map((review) => {
           const stock = stocks.find((item) => String(item.code) === String(field(review, ["code", "証券コード"], "")));
@@ -457,10 +382,7 @@ function renderReviewDetailCard(review) {
 function renderNewsCard(newsItems) {
   return `
     <section class="card">
-      <div class="card-header">
-        ${iconBadge("news")}
-        <h2>関連ニュース</h2>
-      </div>
+      <div class="card-header">${iconBadge("news")}<h2>関連ニュース</h2></div>
       <div class="news-grid">
         ${newsItems.map((news) => {
           const source = field(news, ["source", "ソース"], "");
@@ -483,13 +405,8 @@ function renderListCard(iconName, title, items, tone = "green") {
   if (!normalized.length) return "";
   return `
     <section class="card">
-      <div class="card-header">
-        ${iconBadge(iconName, tone)}
-        <h2>${escapeHtml(title)}</h2>
-      </div>
-      <div class="tag-list">
-        ${normalized.map((item) => `<span class="tag ${tone}">${escapeHtml(item)}</span>`).join("")}
-      </div>
+      <div class="card-header">${iconBadge(iconName, tone)}<h2>${escapeHtml(title)}</h2></div>
+      <div class="tag-list">${normalized.map((item) => `<span class="tag ${tone}">${escapeHtml(item)}</span>`).join("")}</div>
     </section>
   `;
 }
@@ -525,21 +442,19 @@ function getWeeklyReviews() {
 
 function getWeeklyReviewsForStock(stock) {
   return getWeeklyReviews().filter((review) => {
-    const reviewCode = String(field(review, ["code", "証券コード"], ""));
-    const reviewName = String(field(review, ["name", "stockName", "銘柄名"], ""));
-    return (stock.code && reviewCode === String(stock.code)) || (stock.name && reviewName === String(stock.name));
+    const code = String(field(review, ["code", "証券コード"], ""));
+    const name = String(field(review, ["name", "stockName", "銘柄名"], ""));
+    return (stock.code && code === String(stock.code)) || (stock.name && name === String(stock.name));
   });
 }
 
 function getSummary(stocks) {
   const summary = dashboardData.summary || {};
-  const cautionStocks = stocks.filter((stock) => isCautionStock(stock));
+  const cautionStocks = stocks.filter(isCautionStock);
   const hasAction = stocks.some((stock) => actionRequired(stock) === "あり");
   const hasCaution = cautionStocks.length > 0 || stocks.some((stock) => actionRequired(stock) === "要注意");
   const actionRequiredText = hasAction ? "あり" : hasCaution ? "要注意" : textValue(field(summary, ["actionRequired", "needAction", "todayAction"], ""), "なし");
-  const reason = field(summary, ["reason", "主な理由"], "") ||
-    (cautionStocks.length ? `${cautionStocks.map((stock) => stock.name).join(" / ")} を中心に確認します。` : field(summary, ["weeklyFocus"], ""));
-
+  const reason = field(summary, ["reason", "主な理由"], "") || (cautionStocks.length ? `${cautionStocks.map((stock) => stock.name).join(" / ")} を中心に確認します。` : field(summary, ["weeklyFocus"], ""));
   return {
     actionRequired: actionRequiredText,
     actionTone: toneForAction(actionRequiredText),
@@ -548,18 +463,8 @@ function getSummary(stocks) {
   };
 }
 
-function getWeeklySummary(stocks, reviews) {
-  const lowMatch = reviews.some((review) => String(field(review, ["matchLevel", "一致度"], "")).includes("低"));
-  const actionRequiredText = lowMatch ? "来週は要注意" : reviews.length ? "様子見継続" : "週次レビューはまだありません";
-  return {
-    actionRequired: actionRequiredText,
-    actionTone: lowMatch ? "orange" : "green",
-    reason: reviews.length ? "週次レビューの一致度と来週方針を確認します。" : "週次レビュー表示データが入ると、ここに要約が表示されます。"
-  };
-}
-
 function makeOverallPolicy(stocks) {
-  const conclusions = stocks.map((stock) => conclusion(stock)).filter(hasValue);
+  const conclusions = stocks.map(conclusion).filter(hasValue);
   if (conclusions.some((text) => text.includes("方針見直し"))) return "方針見直しあり";
   if (conclusions.some((text) => text.includes("要注意"))) return "放置・要注意";
   if (conclusions.some((text) => text.includes("放置"))) return "放置寄り";
@@ -584,9 +489,9 @@ function isCautionStock(stock) {
 
 function getDecisionRows(stock) {
   const details = Array.isArray(stock.decisionDetails) ? stock.decisionDetails : [];
-  const rows = details.map((item) => `${item.label}: ${item.value}`).filter(hasValue);
+  if (details.length) return details.map((item) => `${item.label}: ${item.value}`).filter(hasValue);
   const breakdown = stock.decisionBreakdown || {};
-  return rows.length ? rows : [
+  return [
     hasValue(breakdown.buy) ? `買い増し: ${breakdown.buy}` : "",
     hasValue(breakdown.takeProfit) ? `利確: ${breakdown.takeProfit}` : "",
     hasValue(breakdown.hold) ? `放置: ${breakdown.hold}` : ""
@@ -601,7 +506,8 @@ function normalizeNews(stock) {
 function normalizeList(value) {
   const source = Array.isArray(value) ? value : hasValue(value) ? String(value).split(/[\n｜|]/) : [];
   return source.map((item) => cleanReferenceText(item)).filter(hasValue);
-}\n
+}
+
 function uniqueList(items) {
   const seen = new Set();
   return normalizeList(items).filter((item) => {
@@ -711,13 +617,11 @@ function getModeLabel() {
 function renderDataStatus() {
   const status = document.getElementById("dataStatus");
   if (!status) return;
-
   if (!DEBUG_MODE) {
     status.hidden = true;
     status.innerHTML = "";
     return;
   }
-
   status.hidden = false;
   status.classList.toggle("is-warning", Boolean(dataSourceInfo.warning));
   status.innerHTML = `
@@ -756,14 +660,19 @@ function logDataDiagnostics(data) {
 }
 
 function displayLoadError() {
-  document.getElementById("dashboardTitle").textContent = "保有株チェック";
-  document.getElementById("dashboardMode").textContent = "読み込み失敗";
-  document.getElementById("dashboardDate").textContent = "--";
-  document.getElementById("targetCount").textContent = "0銘柄";
+  setText("dashboardTitle", "保有株チェック");
+  setText("dashboardMode", "読み込み失敗");
+  setText("dashboardDate", "--");
+  setText("targetCount", "0銘柄");
   document.getElementById("scopeTabs").innerHTML = "";
   document.getElementById("periodTabs").innerHTML = "";
   document.getElementById("stockTabs").innerHTML = "";
   document.getElementById("content").innerHTML = `<p class="error">データを読み込めませんでした</p>`;
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
 }
 
 function iconBadge(name, tone = "green") {
@@ -777,14 +686,12 @@ function icon(name) {
     alert: '<path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>',
     chart: '<path d="M4 19V5"></path><path d="M4 19h16"></path><path d="M8 16v-5"></path><path d="M12 16V8"></path><path d="M16 16v-3"></path>',
     target: '<circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3"></path><path d="M12 19v3"></path><path d="M2 12h3"></path><path d="M19 12h3"></path>',
-    check: '<path d="M20 6L9 17l-5-5"></path>',
-    x: '<path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>',
     lightbulb: '<path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M8 14a6 6 0 1 1 8 0c-.8.7-1 1.4-1 2H9c0-.6-.2-1.3-1-2z"></path>',
     flag: '<path d="M5 22V4"></path><path d="M5 4h11l-1.5 4L16 12H5"></path>',
     news: '<path d="M4 5h14a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V5z"></path><path d="M8 9h8"></path><path d="M8 13h8"></path><path d="M8 17h4"></path>',
     eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle>'
   };
-  return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.check}</svg>`;
+  return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.shield}</svg>`;
 }
 
 function isHttpUrl(value) {
