@@ -1,0 +1,4 @@
+window.STOCK_DASHBOARD_CONFIG = {
+  USE_REMOTE_DATA: false,
+  REMOTE_DATA_URL: ""
+};
