@@ -1,16 +1,22 @@
 :root {
   color-scheme: light;
-  --color-bg: #f6f8f7;
+  --color-bg: #f7fbfb;
   --color-card: #ffffff;
   --color-text: #1f2933;
   --color-muted: #6b7280;
-  --color-border: #e5e7eb;
-  --color-green: #117a37;
-  --color-green-soft: #eaf6ee;
+  --color-border: #e5eeee;
+  --color-main: #0ABAB5;
+  --color-main-dark: #078f8b;
+  --color-main-soft: #e6f8f7;
+  --color-main-border: #9de4e1;
   --color-red: #c62828;
   --color-red-soft: #fdecec;
+  --color-red-border: #f3b4b4;
   --color-orange: #e26d1f;
   --color-orange-soft: #fff3e8;
+  --color-orange-border: #f4b078;
+  --color-blue: #2563eb;
+  --color-blue-soft: #eff6ff;
   --color-neutral-soft: #f2f4f3;
   --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.06);
   --radius-card: 18px;
@@ -19,6 +25,10 @@
 
 * {
   box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 body {
@@ -34,7 +44,7 @@ button {
 }
 
 a {
-  color: var(--color-green);
+  color: var(--color-main-dark);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
   overflow-wrap: anywhere;
@@ -65,7 +75,7 @@ p {
 
 .eyebrow {
   margin-bottom: 5px;
-  color: var(--color-green);
+  color: var(--color-main-dark);
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -114,7 +124,7 @@ h3 {
   gap: 10px;
   margin: 0 -14px 14px;
   padding: 10px 14px 12px;
-  background: rgba(246, 248, 247, 0.94);
+  background: rgba(247, 251, 251, 0.94);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(10px);
 }
@@ -148,20 +158,42 @@ h3 {
   white-space: nowrap;
 }
 
-.tab-button {
+.period-tabs .tab-button,
+.period-tab-button {
+  flex: 1 1 0;
   min-width: 92px;
   padding: 7px 15px;
+}
+
+.scope-tabs .tab-button,
+.scope-tab-button {
+  min-width: 96px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 1.02rem;
+  padding: 8px 4px 9px;
 }
 
 .stock-tab {
   padding: 7px 13px;
 }
 
-.tab-button[aria-selected="true"],
+.scope-tabs .tab-button[aria-selected="true"],
+.scope-tab-button[aria-selected="true"] {
+  border-color: var(--color-main);
+  background: transparent;
+  color: var(--color-main-dark);
+}
+
+.period-tabs .tab-button[aria-selected="true"],
+.period-tab-button[aria-selected="true"],
 .stock-tab[aria-selected="true"] {
-  border-color: var(--color-green);
-  background: var(--color-green-soft);
-  color: var(--color-green);
+  border-color: var(--color-main-border);
+  background: var(--color-main-soft);
+  color: var(--color-main-dark);
 }
 
 .data-status {
@@ -178,7 +210,7 @@ h3 {
 }
 
 .data-status.is-warning {
-  border-color: #f4c48e;
+  border-color: var(--color-orange-border);
   background: var(--color-orange-soft);
   color: var(--color-orange);
 }
@@ -210,8 +242,8 @@ h3 {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--color-green-soft);
-  color: var(--color-green);
+  background: var(--color-main-soft);
+  color: var(--color-main-dark);
 }
 
 .icon-badge.red {
@@ -240,13 +272,13 @@ h3 {
 }
 
 .hero-card {
-  border-color: #cfe5d5;
-  background: linear-gradient(180deg, #ffffff 0%, #f4fbf6 100%);
+  border-color: var(--color-main-border);
+  background: linear-gradient(180deg, #ffffff 0%, #f4fbfb 100%);
 }
 
 .hero-result {
   margin: 0;
-  color: var(--color-green);
+  color: var(--color-main-dark);
   font-size: 1.55rem;
   font-weight: 900;
   line-height: 1.15;
@@ -315,28 +347,31 @@ h3 {
   min-height: 28px;
   border-radius: var(--radius-pill);
   padding: 4px 10px;
-  background: var(--color-neutral-soft);
-  color: var(--color-muted);
+  border: 1px solid var(--color-main-border);
+  background: var(--color-main-soft);
+  color: var(--color-main-dark);
   font-size: 0.8rem;
   font-weight: 800;
 }
 
 .chip.green,
 .tag.green {
-  background: var(--color-green-soft);
-  color: var(--color-green);
+  background: var(--color-main-soft);
+  color: var(--color-main-dark);
 }
 
 .chip.red,
 .tag.red {
   background: var(--color-red-soft);
   color: var(--color-red);
+  border: 1px solid var(--color-red-border);
 }
 
 .chip.orange,
 .tag.orange {
   background: var(--color-orange-soft);
   color: var(--color-orange);
+  border: 1px solid var(--color-orange-border);
 }
 
 .stock-row {
@@ -422,11 +457,11 @@ h3 {
 }
 
 .positive {
-  color: var(--color-green);
+  color: var(--color-red);
 }
 
 .negative {
-  color: var(--color-red);
+  color: var(--color-blue);
 }
 
 .neutral {
