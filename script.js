@@ -11,14 +11,29 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadDashboardData() {
+  const config = window.STOCK_DASHBOARD_CONFIG || {};
+  const remoteUrl = typeof config.REMOTE_DATA_URL === "string" ? config.REMOTE_DATA_URL.trim() : "";
+
+  if (config.USE_REMOTE_DATA === true && remoteUrl) {
+    try {
+      return await fetchJson(remoteUrl);
+    } catch (error) {
+      console.error("remote data load failed. Falling back to data.json.", error);
+    }
+  }
+
   try {
-    const response = await fetch("data.json", { cache: "no-store" });
-    if (!response.ok) throw new Error(`data.json: ${response.status}`);
-    return await response.json();
+    return await fetchJson("data.json");
   } catch (error) {
     console.error("data.json load failed", error);
     return null;
   }
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`${url}: ${response.status}`);
+  return await response.json();
 }
 
 function displayLoadError() {
