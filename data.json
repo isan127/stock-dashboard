@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "保有株チェック",
+    "displayType": "月曜チェック / 今週の予想",
+    "date": "2026-06-06",
+    "targetStocks": ["村田製作所", "ソフトバンクG", "トヨタ"]
+  },
+  "summary": {
+    "actionRequired": "なし",
+    "overallPolicy": "放置寄り",
+    "watchStock": "ソフトバンクG",
+    "weeklyFocus": "AI関連・為替・自動車株の地合い",
+    "commonCheckpoints": ["AI関連ニュースが続くか", "為替が円高に振れないか", "日経平均、電子部品株、自動車株の地合い", "各社のIR、決算、レーティング変更"]
+  },
+  "stocks": [
+    {
+      "name": "村田製作所",
+      "shortName": "村田製作所",
+      "code": "6981",
+      "conclusion": "放置",
+      "confidence": "中",
+      "attentionLevel": "中",
+      "actionRequired": "なし",
+      "price": 9695,
+      "change": -209,
+      "changeRate": -2.11,
+      "oneLine": "直近急騰後の反落。短期は調整気味。",
+      "todayJudgement": "AIサーバー向けMLCC需要や電子部品株の見直しなど、中期材料はまだ崩れていません。一方で、直近で株価が大きく上がった後の調整局面なので、今すぐ買い増しするには高値掴みリスクがあります。会社固有の悪材料で大きく崩れた印象も薄いため、慌てて利確する場面でもありません。",
+      "decisionDetails": [{ "label": "買い増し", "value": "今回はしない" }, { "label": "利確", "value": "今回はしない" }, { "label": "放置", "value": "これでいきましょう" }],
+      "newsSummary": "AIサーバー向けMLCC、電子部品株全体の見直し、車載・センサー系ニュースが中心。",
+      "relatedNews": [
+        { "title": "AIデータセンター関連で注目", "content": "AIサーバー向け高容量MLCC需要が意識されています。", "impact": "プラス", "source": "Newsweek Japan" },
+        { "title": "MLCC需要増と業績期待", "content": "AIサーバー向け需要拡大を背景にMLCC受注増がテーマです。", "impact": "プラス", "source": "マネーポストWEB" },
+        { "title": "公式製品ニュース", "content": "車載向けMLCCやセンサー関連の発表は継続確認対象です。", "impact": "中立からプラス", "source": "村田製作所公式" }
+      ],
+      "forecast": { "prediction": "横ばいからやや上昇寄り", "range": "9,200〜10,300円", "strongCase": "電子部品株全体に買いが入り、10,000円台を回復する展開。", "weakCase": "急騰後の利益確定売りが続き、9,200円付近まで押す展開。", "baseCase": "大きな悪材料がなければ、9,200〜10,300円あたりで横ばいからやや上昇。" },
+      "watchPoints": ["10,000円台を回復できるか", "AI・MLCC関連ニュースが続くか", "電子部品株全体の地合い", "為替", "決算、IR、レーティング変更"],
+      "policyTriggers": ["悪材料なしで大きく押して下げ止まる → 買い増し候補", "高値圏まで急騰して勢いが鈍る → 一部利確候補", "材料が崩れず横ばい → 放置継続", "決算見通しや業績材料が悪化 → 方針見直し"],
+      "shortOutlook": "短期は調整気味。月曜時点では売買せず、放置で良さそうです。"
+    },
+    {
+      "name": "ソフトバンクG",
+      "shortName": "ソフトバンクG",
+      "code": "9984",
+      "conclusion": "放置・要注意",
+      "confidence": "中",
+      "attentionLevel": "高",
+      "actionRequired": "なし",
+      "price": 7426,
+      "change": 49,
+      "changeRate": 0.66,
+      "oneLine": "AI関連材料は強いが、値動きは荒め。",
+      "todayJudgement": "AIデータセンターやAIインフラ投資の材料は強い一方で、株価の値動きはかなり荒いです。今すぐ買い増しするにはリスクが高く、材料が残っているため慌てて利確する場面でもありません。3銘柄の中では一番注意して見る銘柄です。",
+      "decisionDetails": [{ "label": "買い増し", "value": "今回はしない" }, { "label": "利確", "value": "今回はしない" }, { "label": "放置", "value": "これでいきましょう" }],
+      "newsSummary": "AIデータセンター投資、AIインフラ、需給の荒さが中心。",
+      "relatedNews": [
+        { "title": "AIデータセンター大型投資", "content": "AIデータセンター関連の大型投資が材料として意識されています。", "impact": "プラス", "source": "ソフトバンクG公式" },
+        { "title": "AIインフラ投資への期待", "content": "AIインフラ関連銘柄としての評価が続いています。", "impact": "プラス", "source": "Reuters" },
+        { "title": "値動きの荒さと需給", "content": "AI関連株の利食い売りや信用需給には注意が必要です。", "impact": "中立からマイナス", "source": "Yahooファイナンス" }
+      ],
+      "forecast": { "prediction": "横ばいから荒い展開", "range": "7,000〜8,200円", "strongCase": "AI関連材料が再評価され、8,000円台を回復する展開。", "weakCase": "AI関連株の利食い売りが続き、7,000円付近まで押す展開。", "baseCase": "材料は強いが、需給が荒く、上下に振れやすい展開。" },
+      "watchPoints": ["AI投資関連ニュース", "Arm関連", "NASDAQの地合い", "信用需給", "資金調達リスク"],
+      "policyTriggers": ["7,000円付近で下げ止まり、AI材料が継続 → 買い増し候補", "8,500円以上まで急騰して上値が重い → 一部利確候補", "AI投資への懸念や資金調達リスクが強まる → 方針見直し"],
+      "shortOutlook": "短期は荒い展開。放置でよいが、値動きは強めに監視したいです。"
+    },
+    {
+      "name": "トヨタ",
+      "shortName": "トヨタ",
+      "code": "7203",
+      "conclusion": "放置",
+      "confidence": "中",
+      "attentionLevel": "中",
+      "actionRequired": "なし",
+      "price": 2850,
+      "change": 12,
+      "changeRate": 0.41,
+      "oneLine": "材料はやや重いが、急いで売る局面ではない。",
+      "todayJudgement": "トヨタは為替・関税・自動車株全体の地合いの影響を受けやすく、短期的には少し重い印象です。ただし、急いで売るほど大きく崩れているわけではありません。買い増しは下げ止まりを確認してからでよく、現時点では放置が無難です。",
+      "decisionDetails": [{ "label": "買い増し", "value": "今回はしない" }, { "label": "利確", "value": "今回はしない" }, { "label": "放置", "value": "これでいきましょう" }],
+      "newsSummary": "為替、自動車株の地合い、レーティング、販売台数への注目が中心。",
+      "relatedNews": [
+        { "title": "直近株価は上値が重い", "content": "直近では上値が重く、下げ止まり確認の局面です。", "impact": "中立からマイナス", "source": "Yahooファイナンス" },
+        { "title": "レーティング・目標株価の見直し", "content": "証券会社の目標株価変更が上値の重さにつながる可能性があります。", "impact": "中立からマイナス", "source": "Yahooファイナンス" },
+        { "title": "為替・関税・販売台数に注意", "content": "為替、関税、米国販売、決算見通しが今後の確認材料です。", "impact": "中立", "source": "トヨタ公式" }
+      ],
+      "forecast": { "prediction": "横ばいからやや弱含み寄り", "range": "2,780〜2,950円", "strongCase": "2,900円台を回復して下げ止まり感が出る展開。", "weakCase": "2,800円を割り込み、下値を試す展開。", "baseCase": "材料は重いが、急落というより下げ止まり確認の週。" },
+      "watchPoints": ["為替", "米国販売", "関税", "決算", "HV/EV戦略"],
+      "policyTriggers": ["2,800円付近で下げ止まり、為替や自動車株の地合いが改善 → 買い増し候補", "2,950〜3,000円付近まで戻して上値が重い → 一部利確候補", "関税・為替・業績見通しが悪化 → 方針見直し"],
+      "shortOutlook": "短期はやや重いです。今は放置で、下げ止まりを確認する局面です。"
+    }
+  ],
+  "weeklyReview": { "weeklyResult": "", "mondayForecast": "", "actualRange": "", "matchLevel": "", "matchedPoints": "", "missedPoints": "", "nextImprovement": "", "provisionalNextPolicy": "" }
+}
