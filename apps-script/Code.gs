@@ -23,18 +23,23 @@ const PUBLIC_SETTING_KEYS = [
 ];
 
 function doGet(e) {
-  try {
-    const data = buildDashboardData_();
-    return createJsonOutput_(data);
-  } catch (error) {
-    console.error(error);
+  const callback = e && e.parameter ? String(e.parameter.callback || "").trim() : "";
+  if (callback && !isValidCallbackName_(callback)) {
     return createJsonOutput_({
       error: true,
+      message: "callback名が不正です。"
+    });
+  }
+
+  try {
+    const data = buildDashboardData_();
+    return callback ? createJsonpOutput_(callback, data) : createJsonOutput_(data);
+  } catch (error) {
+    console.error(error);
+    const errorData = {
+      error: true,
       message: "ダッシュボード用JSONを作成できませんでした。",
-      meta: {
-        date: formatDate_(new Date()),
-        target: "保有銘柄"
-      },
+      meta: { date: formatDate_(new Date()), target: "保有銘柄" },
       summary: {
         needAction: "確認が必要",
         actionRequired: "確認が必要",
@@ -46,15 +51,14 @@ function doGet(e) {
       },
       stocks: [],
       weeklyReview: {}
-    });
+    };
+    return callback ? createJsonpOutput_(callback, errorData) : createJsonOutput_(errorData);
   }
 }
 
 function buildDashboardData_() {
   const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SCRIPT_PROPERTY_SPREADSHEET_ID);
-  if (!spreadsheetId) {
-    throw new Error("Script Properties に SPREADSHEET_ID が設定されていません。");
-  }
+  if (!spreadsheetId) throw new Error("Script Properties に SPREADSHEET_ID が設定されていません。");
 
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   const settings = readSettings_(spreadsheet);
@@ -132,34 +136,13 @@ function buildStock_(row) {
       { label: "利確", value: "今回はしない" },
       { label: "放置", value: "これでいきましょう" }
     ],
-    decisionBreakdown: {
-      buy: "今回はしない",
-      takeProfit: "今回はしない",
-      hold: "これでいきましょう"
-    },
+    decisionBreakdown: { buy: "今回はしない", takeProfit: "今回はしない", hold: "これでいきましょう" },
     newsSummary: "ニュースは今後ChatGPT生成データを反映予定です。",
     newsTrend: "ニュースは今後ChatGPT生成データを反映予定です。",
     relatedNews: [],
     news: [],
-    forecast: {
-      prediction: "未設定",
-      confidence: "未設定",
-      range: "未設定",
-      strongCase: "",
-      weakCase: "",
-      baseCase: ""
-    },
-    weeklyForecast: {
-      forecast: "未設定",
-      confidence: "未設定",
-      range: {
-        low: null,
-        high: null
-      },
-      strongCase: "",
-      weakCase: "",
-      baseCase: ""
-    },
+    forecast: { prediction: "未設定", confidence: "未設定", range: "未設定", strongCase: "", weakCase: "", baseCase: "" },
+    weeklyForecast: { forecast: "未設定", confidence: "未設定", range: { low: null, high: null }, strongCase: "", weakCase: "", baseCase: "" },
     investmentPurpose: investmentPurpose,
     priority: priority,
     watchPoints: watchPoints,
@@ -173,13 +156,9 @@ function buildStock_(row) {
 
 function readSheetObjects_(spreadsheet, sheetName) {
   const sheet = spreadsheet.getSheetByName(sheetName);
-  if (!sheet) {
-    throw new Error(sheetName + " シートが見つかりません。");
-  }
-
+  if (!sheet) throw new Error(sheetName + " シートが見つかりません。");
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
-
   const headers = values[0].map((header) => String(header || "").trim());
   return values.slice(1).map((row) => {
     const item = {};
@@ -193,18 +172,15 @@ function readSheetObjects_(spreadsheet, sheetName) {
 function readSettings_(spreadsheet) {
   const sheet = spreadsheet.getSheetByName(SHEET_SETTINGS);
   if (!sheet) return {};
-
   const values = sheet.getDataRange().getValues();
   const settings = {};
   values.forEach((row) => {
     const key = String(row[0] || "").trim();
     if (!PUBLIC_SETTING_KEYS.includes(key)) return;
-
     if (key === "通知先") {
       settings[key] = row[1] ? "設定済み" : "未設定";
       return;
     }
-
     settings[key] = normalizeSettingValue_(row[1]);
   });
   return settings;
@@ -221,9 +197,15 @@ function buildCommonCheckpoints_(stocks) {
 }
 
 function createJsonOutput_(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function createJsonpOutput_(callback, data) {
+  return ContentService.createTextOutput(callback + "(" + JSON.stringify(data) + ");").setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function isValidCallbackName_(callback) {
+  return /^[A-Za-z0-9_.]+$/.test(callback);
 }
 
 function stringValue_(value) {
@@ -232,10 +214,7 @@ function stringValue_(value) {
 }
 
 function splitList_(value) {
-  return stringValue_(value)
-    .split(/[\n,、]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return stringValue_(value).split(/[\n,、]/).map((item) => item.trim()).filter(Boolean);
 }
 
 function toNumber_(value, fallback) {
