@@ -378,7 +378,7 @@ function cleanReferenceText_(value) {
 
 function splitList_(value) {
   return cleanReferenceText_(value)
-    .split(/[\n,、]/)
+    .split(/[\n｜|]/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
