@@ -135,6 +135,24 @@ python3 -m http.server 8000
 5. ブラウザで `http://localhost:8000` を開く
 6. 全体 / 村田製作所 / ソフトバンクG / トヨタ のタブが切り替わるか確認する
 
+## CORS時のJSONP取得
+
+GitHub PagesからGoogle Apps ScriptのWeb App URLを通常の `fetch` で読むと、CORS制限で失敗する場合があります。
+
+このダッシュボードは、`USE_REMOTE_DATA=true` かつ `REMOTE_DATA_URL` が設定されている場合、まず通常のremote fetchを試します。fetchが失敗した場合は、同じApps Script URLに `callback` パラメータを付けてJSONP方式で取得します。JSONPでも失敗した場合のみ、`data.json` にフォールバックします。
+
+Apps Script側の `apps-script/Code.gs` は、`callback` パラメータがある場合に以下のようなJavaScript形式で返します。
+
+```js
+callbackName({...});
+```
+
+`callback` がない場合は、従来通りJSONを返します。callback名は安全性のため、英数字・アンダースコア・ドットのみ許可しています。
+
+画面上の `データ取得元` が `Remote JSONP` になっていれば、GitHub PagesからJSONP経由でスプレッドシート連携データを読めています。`Remote JSON` なら通常fetchで成功しています。
+
+それでも `Remote失敗 → Local fallback` になる場合は、Apps Script URL、Webアプリのデプロイ権限、`config.js` の `USE_REMOTE_DATA` と `REMOTE_DATA_URL` を確認してください。
+
 ## 反映されないときの確認手順
 
 GoogleスプレッドシートやApps Script側では更新されているのに、GitHub Pages側のダッシュボードに古い銘柄名が出る場合は、以下を確認してください。
@@ -142,11 +160,13 @@ GoogleスプレッドシートやApps Script側では更新されているのに
 1. GitHub Pagesの `/config.js?v=数字` を直接開き、`USE_REMOTE_DATA=true` になっているか確認する
 2. `REMOTE_DATA_URL` にApps ScriptのWeb App URLが入っているか確認する
 3. Apps Script URLを直接開き、JSON内の銘柄名が更新されているか確認する
-4. GitHub Pagesのダッシュボードを `?v=数字` 付きで開き直す
-5. 画面上部の `データ取得元` を確認する
-6. `データ取得元：Remote JSON` ならremote JSONを表示しています
-7. `データ取得元：Local data.json` ならremote設定が無効、またはURL未設定です
-8. `データ取得元：Remote失敗 → Local fallback` ならremote取得に失敗し、`data.json` を表示しています
-9. ブラウザの開発者ツールのConsoleで `Loaded remote data:` または `Loaded local data.json` のログを確認する
+4. Apps Script URLに `?callback=test` を付けて開き、`test({...});` の形式で返るか確認する
+5. GitHub Pagesのダッシュボードを `?v=数字` 付きで開き直す
+6. 画面上部の `データ取得元` を確認する
+7. `データ取得元：Remote JSON` なら通常fetchでremote JSONを表示しています
+8. `データ取得元：Remote JSONP` ならJSONPでremote JSONを表示しています
+9. `データ取得元：Local data.json` ならremote設定が無効、またはURL未設定です
+10. `データ取得元：Remote失敗 → Local fallback` ならremote fetchとJSONPの両方に失敗し、`data.json` を表示しています
+11. ブラウザの開発者ツールのConsoleで `fetch remote start`、`jsonp remote success`、`loaded local data.json` などのログを確認する
 
-remote取得に失敗した場合は、画面にも `Remote JSONの取得に失敗したため、data.jsonを表示しています` と表示されます。
+remote fetchとJSONPの両方に失敗した場合は、画面にも `Remote JSONとJSONPの取得に失敗したため、data.jsonを表示しています` と表示されます。
