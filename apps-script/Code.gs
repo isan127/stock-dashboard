@@ -1,6 +1,7 @@
 const SCRIPT_PROPERTY_SPREADSHEET_ID = "SPREADSHEET_ID";
 const SHEET_HOLDINGS = "保有銘柄マスター";
 const SHEET_SETTINGS = "設定";
+const SHEET_DASHBOARD_DISPLAY = "ダッシュボード表示データ";
 
 const PUBLIC_SETTING_KEYS = [
   "通知時間",
@@ -25,10 +26,7 @@ const PUBLIC_SETTING_KEYS = [
 function doGet(e) {
   const callback = e && e.parameter ? String(e.parameter.callback || "").trim() : "";
   if (callback && !isValidCallbackName_(callback)) {
-    return createJsonOutput_({
-      error: true,
-      message: "callback名が不正です。"
-    });
+    return createJsonOutput_({ error: true, message: "callback名が不正です。" });
   }
 
   try {
@@ -47,7 +45,8 @@ function doGet(e) {
         alertStock: "未設定",
         watchStock: "未設定",
         weeklyFocus: "未設定",
-        commonCheckpoints: []
+        commonCheckpoints: [],
+        stockDigest: []
       },
       stocks: [],
       weeklyReview: {}
@@ -63,13 +62,18 @@ function buildDashboardData_() {
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   const settings = readSettings_(spreadsheet);
   const masterRows = readSheetObjects_(spreadsheet, SHEET_HOLDINGS);
+  const dashboardDisplayRows = getDashboardDisplayRowsForCurrentMode_(spreadsheet);
+  const dashboardDisplayByCode = buildDashboardDisplayMap_(dashboardDisplayRows);
+
   const activeRows = masterRows
-    .filter((row) => String(row["有効/無効"] || "").trim() === "有効")
+    .filter((row) => stringValue_(row["有効/無効"]) === "有効")
     .sort((a, b) => toNumber_(a["表示順"], 9999) - toNumber_(b["表示順"], 9999));
 
-  const stocks = activeRows.map((row) => buildStock_(row));
-  const alertStock = stocks.find((stock) => stock.attentionLevel === "高") || stocks[0] || null;
-  const commonCheckpoints = buildCommonCheckpoints_(stocks);
+  const stocks = activeRows
+    .map((row) => applyDashboardDisplayData_(buildStock_(row), dashboardDisplayByCode[stringValue_(row["証券コード"])]))
+    .sort((a, b) => toNumber_(a.displayOrder, 9999) - toNumber_(b.displayOrder, 9999));
+
+  const summary = buildSummary_(stocks);
   const displayType = settings["表示形式"] || "月曜チェック＋今週の予想";
 
   return {
@@ -82,15 +86,7 @@ function buildDashboardData_() {
       targetStocks: stocks.map((stock) => stock.name),
       settings: settings
     },
-    summary: {
-      needAction: "なし",
-      actionRequired: "なし",
-      overallPolicy: "放置寄り",
-      alertStock: alertStock ? alertStock.name : "未設定",
-      watchStock: alertStock ? alertStock.name : "未設定",
-      weeklyFocus: "AI関連・為替・自動車株の地合い",
-      commonCheckpoints: commonCheckpoints
-    },
+    summary: summary,
     stocks: stocks,
     weeklyReview: {
       weeklyResult: "",
@@ -103,6 +99,30 @@ function buildDashboardData_() {
       provisionalNextPolicy: ""
     }
   };
+}
+
+function getDashboardDisplayRowsForCurrentMode_(spreadsheet) {
+  const rows = readOptionalSheetObjects_(spreadsheet, SHEET_DASHBOARD_DISPLAY)
+    .filter((row) => stringValue_(row["有効/無効"]) === "有効");
+  return rows;
+}
+
+function buildDashboardDisplayMap_(rows) {
+  const byCode = {};
+  rows.forEach((row) => {
+    const code = stringValue_(row["証券コード"]);
+    if (!code) return;
+    const current = byCode[code];
+    if (!current || compareDashboardRows_(row, current) > 0) byCode[code] = row;
+  });
+  return byCode;
+}
+
+function compareDashboardRows_(a, b) {
+  const dateA = toDateTime_(a["日付"]);
+  const dateB = toDateTime_(b["日付"]);
+  if (dateA !== dateB) return dateA - dateB;
+  return toNumber_(a.__rowNumber, 0) - toNumber_(b.__rowNumber, 0);
 }
 
 function buildStock_(row) {
@@ -141,7 +161,7 @@ function buildStock_(row) {
     newsTrend: "ニュースは今後ChatGPT生成データを反映予定です。",
     relatedNews: [],
     news: [],
-    forecast: { prediction: "未設定", confidence: "未設定", range: "未設定", strongCase: "", weakCase: "", baseCase: "" },
+    forecast: { prediction: "未設定", confidence: "未設定", range: { low: null, high: null }, strongCase: "", weakCase: "", baseCase: "" },
     weeklyForecast: { forecast: "未設定", confidence: "未設定", range: { low: null, high: null }, strongCase: "", weakCase: "", baseCase: "" },
     investmentPurpose: investmentPurpose,
     priority: priority,
@@ -150,18 +170,138 @@ function buildStock_(row) {
     triggers: triggers,
     policyTriggers: triggers,
     shortTermView: "",
-    shortOutlook: ""
+    shortOutlook: "",
+    displayOrder: toNumber_(row["表示順"], 9999)
+  };
+}
+
+function applyDashboardDisplayData_(stock, row) {
+  if (!row) return stock;
+
+  const name = stringValue_(row["銘柄名"]);
+  const code = stringValue_(row["証券コード"]);
+  const summaryComment = stringValue_(row["一言"]);
+  const decisionText = stringValue_(row["今日時点の判断"]);
+  const newsTrend = stringValue_(row["ニュース傾向"]);
+  const forecastText = stringValue_(row["今週予想"]);
+  const confidence = stringValue_(row["自信度"]);
+  const watchPoints = splitList_(row["今後見るポイント"]);
+  const triggers = splitList_(row["方針変更トリガー"]);
+  const range = { low: nullableNumber_(row["想定レンジ下限"]), high: nullableNumber_(row["想定レンジ上限"]) };
+  const weeklyForecast = {
+    forecast: forecastText || stock.weeklyForecast.forecast,
+    confidence: confidence || stock.weeklyForecast.confidence,
+    range: range,
+    strongCase: stringValue_(row["強い場合"]),
+    weakCase: stringValue_(row["弱い場合"]),
+    baseCase: stringValue_(row["基本想定"])
+  };
+  const news = buildNews_(row);
+  const decisionBreakdown = {
+    buy: stringValue_(row["買い増し判断"]) || stock.decisionBreakdown.buy,
+    takeProfit: stringValue_(row["利確判断"]) || stock.decisionBreakdown.takeProfit,
+    hold: stringValue_(row["放置判断"]) || stock.decisionBreakdown.hold
+  };
+
+  return Object.assign({}, stock, {
+    name: name || stock.name,
+    shortName: name || stock.shortName,
+    code: code || stock.code,
+    price: nullableNumber_(row["株価"]),
+    change: nullableNumber_(row["前日比"]),
+    changeRate: nullableNumber_(row["前日比率"]),
+    conclusion: stringValue_(row["結論"]) || stock.conclusion,
+    confidence: confidence || stock.confidence,
+    attentionLevel: confidence || stock.attentionLevel,
+    needAction: stringValue_(row["今日動く必要"]) || stock.needAction,
+    actionRequired: stringValue_(row["今日動く必要"]) || stock.actionRequired,
+    oneLine: summaryComment || stock.oneLine,
+    summaryComment: summaryComment || stock.summaryComment,
+    todayJudgement: decisionText || stock.todayJudgement,
+    decisionText: decisionText || stock.decisionText,
+    decisionDetails: [
+      { label: "買い増し", value: decisionBreakdown.buy },
+      { label: "利確", value: decisionBreakdown.takeProfit },
+      { label: "放置", value: decisionBreakdown.hold }
+    ],
+    decisionBreakdown: decisionBreakdown,
+    newsSummary: newsTrend || stock.newsSummary,
+    newsTrend: newsTrend || stock.newsTrend,
+    relatedNews: news,
+    news: news,
+    forecast: {
+      prediction: weeklyForecast.forecast,
+      confidence: weeklyForecast.confidence,
+      range: weeklyForecast.range,
+      strongCase: weeklyForecast.strongCase,
+      weakCase: weeklyForecast.weakCase,
+      baseCase: weeklyForecast.baseCase
+    },
+    weeklyForecast: weeklyForecast,
+    watchPoints: watchPoints,
+    triggers: triggers,
+    policyTriggers: triggers,
+    shortTermView: stringValue_(row["最短見通し"]),
+    shortOutlook: stringValue_(row["最短見通し"]),
+    displayOrder: toNumber_(row["表示順"], stock.displayOrder)
+  });
+}
+
+function buildNews_(row) {
+  const news = [];
+  for (let index = 1; index <= 3; index += 1) {
+    const title = stringValue_(row[`ニュース${index}_見出し`]);
+    const content = stringValue_(row[`ニュース${index}_内容`]);
+    const impact = stringValue_(row[`ニュース${index}_影響`]);
+    const source = stringValue_(row[`ニュース${index}_ソース`]);
+    if (!title && !content && !impact && !source) continue;
+    news.push({ title: title, content: content, impact: impact, source: source });
+  }
+  return news;
+}
+
+function buildSummary_(stocks) {
+  const alertStocks = stocks
+    .filter((stock) => stock.conclusion.includes("要注意") || stock.conclusion.includes("方針見直し"))
+    .map((stock) => stock.name);
+  const actionRequired = stocks.some((stock) => stringValue_(stock.needAction).includes("あり")) ? "あり" : "なし";
+  const commonCheckpoints = buildCommonCheckpoints_(stocks);
+
+  return {
+    needAction: actionRequired,
+    actionRequired: actionRequired,
+    overallPolicy: "放置寄り",
+    alertStock: alertStocks.length ? alertStocks.join("、") : "未設定",
+    watchStock: alertStocks.length ? alertStocks.join("、") : "未設定",
+    weeklyFocus: "AI関連・為替・自動車株の地合い",
+    commonCheckpoints: commonCheckpoints,
+    stockDigest: stocks.map((stock) => ({
+      name: stock.name,
+      conclusion: stock.conclusion,
+      weeklyForecast: stock.weeklyForecast.forecast,
+      priority: stock.priority || stock.attentionLevel
+    }))
   };
 }
 
 function readSheetObjects_(spreadsheet, sheetName) {
   const sheet = spreadsheet.getSheetByName(sheetName);
   if (!sheet) throw new Error(sheetName + " シートが見つかりません。");
+  return sheetToObjects_(sheet);
+}
+
+function readOptionalSheetObjects_(spreadsheet, sheetName) {
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  if (!sheet) return [];
+  return sheetToObjects_(sheet);
+}
+
+function sheetToObjects_(sheet) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
   const headers = values[0].map((header) => String(header || "").trim());
-  return values.slice(1).map((row) => {
-    const item = {};
+  return values.slice(1).map((row, rowIndex) => {
+    const item = { __rowNumber: rowIndex + 2 };
     headers.forEach((header, index) => {
       if (header) item[header] = row[index];
     });
@@ -217,9 +357,23 @@ function splitList_(value) {
   return stringValue_(value).split(/[\n,、]/).map((item) => item.trim()).filter(Boolean);
 }
 
+function nullableNumber_(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function toNumber_(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+
+function toDateTime_(value) {
+  if (value instanceof Date) return value.getTime();
+  const text = stringValue_(value);
+  if (!text) return 0;
+  const time = Date.parse(text);
+  return Number.isFinite(time) ? time : 0;
 }
 
 function priorityToConfidence_(priority) {
