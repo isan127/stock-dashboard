@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">保有株チェック</p>
+      <h1 id="page-title">月曜チェック＋今週の予想</h1>
+      <p id="page-date" class="subtext">読み込み中...</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <nav id="tabs" class="tabs"></nav>
+
+    <section id="content" class="content-card">
+      <p>データを読み込み中です...</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>※これは売買指示ではなく、株価・ニュース・材料から見た判断材料です。</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
