@@ -8,24 +8,30 @@
   </head>
   <body>
     <main class="app-shell">
-      <header class="topbar">
+      <header class="app-header">
         <div>
           <p class="eyebrow" id="dashboardMode">毎朝チェック</p>
           <h1 id="dashboardTitle">保有株チェック</h1>
         </div>
-        <div class="meta-panel" aria-label="表示情報">
+        <div class="date-card" aria-label="表示情報">
           <span id="dashboardDate">--</span>
           <strong id="targetCount">0銘柄</strong>
         </div>
       </header>
-      <div class="data-status" id="dataStatus" aria-live="polite" hidden>
-        データ取得元：確認中
-      </div>
-      <nav class="tabs" id="tabs" aria-label="表示タブ"></nav>
+
+      <section class="control-panel" aria-label="表示切り替え">
+        <nav class="scope-tabs" id="scopeTabs" aria-label="全体または個別"></nav>
+        <nav class="period-tabs" id="periodTabs" aria-label="期間"></nav>
+        <nav class="stock-tabs" id="stockTabs" aria-label="銘柄" hidden></nav>
+      </section>
+
+      <div class="data-status" id="dataStatus" aria-live="polite" hidden></div>
+
       <section class="content" id="content" aria-live="polite">
         <p class="loading">読み込み中...</p>
       </section>
     </main>
+
     <script src="config.js"></script>
     <script src="script.js"></script>
   </body>
