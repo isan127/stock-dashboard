@@ -179,6 +179,10 @@ function renderNavigation(stocks) {
   document.querySelectorAll("[data-scope]").forEach((button) => {
     button.addEventListener("click", () => {
       state.currentScope = button.dataset.scope;
+      if (!state.currentPeriod) state.currentPeriod = "daily";
+      if (state.currentScope === "individual" && !state.currentStockCode && stocks.length) {
+        state.currentStockCode = stocks[0].code;
+      }
       render();
     });
   });
@@ -200,7 +204,7 @@ function renderNavigation(stocks) {
 
 function renderTab(option, activeValue, key) {
   return `
-    <button class="tab-button" type="button" aria-selected="${option.id === activeValue}" data-${key}="${option.id}">
+    <button class="tab-button ${key}-tab-button" type="button" aria-selected="${option.id === activeValue}" data-${key}="${option.id}">
       ${escapeHtml(option.label)}
     </button>
   `;
@@ -597,8 +601,7 @@ function normalizeNews(stock) {
 function normalizeList(value) {
   const source = Array.isArray(value) ? value : hasValue(value) ? String(value).split(/[\n｜|]/) : [];
   return source.map((item) => cleanReferenceText(item)).filter(hasValue);
-}
-
+}\n
 function uniqueList(items) {
   const seen = new Set();
   return normalizeList(items).filter((item) => {
