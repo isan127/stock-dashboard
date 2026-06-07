@@ -43,12 +43,12 @@
     document.querySelectorAll(".card").forEach((card) => {
       const title = normalize(card.querySelector("h2")?.textContent);
       if (title !== SUMMARY_TITLE) return;
-      const sourceList = card.querySelector(".brush-summary-list");
+      const sourceList = card.querySelector(".brush-summary-list, .compact-summary");
       if (!sourceList || sourceList.dataset.summaryVisibilityPeriod === period) return;
 
-      const rows = Array.from(sourceList.querySelectorAll(".brush-summary-row"))
-        .map((row) => Array.from(row.querySelectorAll("span")).map((span) => normalize(span.textContent)))
-        .filter((row) => row.length && row.some(hasValue));
+      const rows = sourceList.classList.contains("compact-summary")
+        ? readCompactRows(period, sourceList)
+        : readBrushRows(sourceList);
 
       if (!rows.length) return;
 
@@ -57,6 +57,45 @@
       sourceList.dataset.summaryVisibilityPeriod = period;
       sourceList.innerHTML = rows.map((row) => renderRow(period, row)).join("");
     });
+  }
+
+  function readBrushRows(sourceList) {
+    return Array.from(sourceList.querySelectorAll(".brush-summary-row"))
+      .map((row) => Array.from(row.querySelectorAll("span")).map((span) => normalize(span.textContent)))
+      .filter((row) => row.length && row.some(hasValue));
+  }
+
+  function readCompactRows(period, sourceList) {
+    return Array.from(sourceList.querySelectorAll(".compact-summary-row")).map((row) => {
+      const name = normalize(row.querySelector(".compact-summary-main strong")?.textContent);
+      const policy = normalize(row.querySelector(".compact-summary-main .chip")?.textContent);
+      const details = readInlineDetails(row);
+      if (period === "monthly") {
+        return [
+          name,
+          details[label("monthlyChange")] || "",
+          details[label("monthlyTrend")] || "",
+          policy || details[label("nextMonthPolicy")] || ""
+        ];
+      }
+      return [
+        name,
+        details[label("weeklyChange")] || "",
+        details[label("weeklyRange")] || "",
+        details[label("match")] || "",
+        policy
+      ];
+    }).filter((row) => row.length && row.some(hasValue));
+  }
+
+  function readInlineDetails(row) {
+    const details = {};
+    row.querySelectorAll(".inline-detail").forEach((item) => {
+      const labelText = normalize(item.querySelector("span")?.textContent);
+      const valueText = normalize(item.textContent).replace(labelText, "").trim();
+      if (labelText) details[labelText] = valueText;
+    });
+    return details;
   }
 
   function renderRow(period, row) {
@@ -168,6 +207,10 @@
   function label(key) {
     const labels = {
       match: "\u4e00\u81f4\u5ea6",
+      weeklyChange: "\u9031\u9593\u5909\u5316",
+      weeklyRange: "\u9031\u5185\u30ec\u30f3\u30b8",
+      monthlyChange: "\u6708\u9593\u5909\u5316",
+      nextMonthPolicy: "\u7fcc\u6708\u65b9\u91dd",
       monthlyTrend: "\u6708\u9593\u50be\u5411"
     };
     return labels[key] || key;
