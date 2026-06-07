@@ -68,20 +68,33 @@
   }
 
   function start() {
+    window.refreshStockDashboardIcons = applyIconFix;
+    document.addEventListener("click", () => {
+      scheduleIconFix(0);
+      scheduleIconFix(120);
+      scheduleIconFix(360);
+      scheduleIconFix(900);
+    }, true);
+
     applyIconFix();
     let ticks = 0;
     const timer = window.setInterval(() => {
       applyIconFix();
       ticks += 1;
-      if (ticks >= 90) window.clearInterval(timer);
-    }, 500);
+      if (ticks >= 900) window.clearInterval(timer);
+    }, 100);
 
     let pending = 0;
     const observer = new MutationObserver(() => {
       window.clearTimeout(pending);
-      pending = window.setTimeout(applyIconFix, 50);
+      pending = window.setTimeout(applyIconFix, 30);
+      scheduleIconFix(160);
     });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+
+  function scheduleIconFix(delay) {
+    window.setTimeout(applyIconFix, delay);
   }
 
   function applyIconFix() {
