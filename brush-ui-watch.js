@@ -20,6 +20,11 @@
     setBrand();
     normalizeTabs();
     document.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    if (typeof window.refreshStockDashboardIcons === "function") {
+      window.refreshStockDashboardIcons();
+      window.setTimeout(window.refreshStockDashboardIcons, 120);
+      window.setTimeout(window.refreshStockDashboardIcons, 360);
+    }
   }
 
   function setBrand() {
