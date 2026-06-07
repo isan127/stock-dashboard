@@ -27,39 +27,39 @@
     split: '<path d="M6 3v5a6 6 0 0 0 6 6h6"></path><path d="M18 9l4 5-4 5"></path><path d="M6 21v-5a6 6 0 0 1 6-6h2"></path>'
   };
 
-  const CARD_ICONS = {
-    "対応の必要性": ["shield", "green"],
-    "現在の結論": ["scale", "green"],
-    "要注意銘柄": ["alert", "red"],
-    "主な理由": ["info", "green"],
-    "銘柄サマリー": ["table", "green"],
-    "見るポイント": ["eye", "green"],
-    "方針変更トリガー": ["alert", "orange"],
-    "株価サマリー": ["lineChart", "green"],
-    "関連ニュース": ["document", "green"],
-    "最短見通し": ["flag", "orange"],
-    "週次サマリー": ["calendar", "green"],
-    "実際の値動き": ["lineChart", "green"],
-    "一致度": ["target", "red"],
-    "予想の振り返り": ["review", "green"],
-    "来週に向けた暫定方針": ["flag", "orange"],
-    "月間サマリー": ["calendarMonth", "green"],
-    "月間の主な理由": ["document", "green"],
-    "強弱材料": ["balance", "green"],
-    "来月方針": ["flag", "orange"],
-    "来月見るポイント": ["eye", "green"],
-    "月次評価": ["calendarMonth", "green"]
-  };
+  const CARD_ICONS = new Map([
+    ["\u5bfe\u5fdc\u306e\u5fc5\u8981\u6027", ["shield", "green"]],
+    ["\u73fe\u5728\u306e\u7d50\u8ad6", ["scale", "green"]],
+    ["\u8981\u6ce8\u610f\u9298\u67c4", ["alert", "red"]],
+    ["\u4e3b\u306a\u7406\u7531", ["info", "green"]],
+    ["\u9298\u67c4\u30b5\u30de\u30ea\u30fc", ["table", "green"]],
+    ["\u898b\u308b\u30dd\u30a4\u30f3\u30c8", ["eye", "green"]],
+    ["\u65b9\u91dd\u5909\u66f4\u30c8\u30ea\u30ac\u30fc", ["alert", "orange"]],
+    ["\u682a\u4fa1\u30b5\u30de\u30ea\u30fc", ["lineChart", "green"]],
+    ["\u95a2\u9023\u30cb\u30e5\u30fc\u30b9", ["document", "green"]],
+    ["\u6700\u77ed\u898b\u901a\u3057", ["flag", "orange"]],
+    ["\u9031\u6b21\u30b5\u30de\u30ea\u30fc", ["calendar", "green"]],
+    ["\u5b9f\u969b\u306e\u5024\u52d5\u304d", ["lineChart", "green"]],
+    ["\u4e00\u81f4\u5ea6", ["target", "red"]],
+    ["\u4e88\u60f3\u306e\u632f\u308a\u8fd4\u308a", ["review", "green"]],
+    ["\u6765\u9031\u306b\u5411\u3051\u305f\u66ab\u5b9a\u65b9\u91dd", ["flag", "orange"]],
+    ["\u6708\u9593\u30b5\u30de\u30ea\u30fc", ["calendarMonth", "green"]],
+    ["\u6708\u9593\u306e\u4e3b\u306a\u7406\u7531", ["document", "green"]],
+    ["\u5f37\u5f31\u6750\u6599", ["balance", "green"]],
+    ["\u6765\u6708\u65b9\u91dd", ["flag", "orange"]],
+    ["\u6765\u6708\u898b\u308b\u30dd\u30a4\u30f3\u30c8", ["eye", "green"]],
+    ["\u6708\u6b21\u8a55\u4fa1", ["calendarMonth", "green"]]
+  ]);
 
-  const INLINE_ICONS = {
-    "当たった点": ["checkCircle", "green"],
-    "外れた点": ["xCircle", "red"],
-    "次回に活かす点": ["lightbulb", "green"],
-    "強材料": ["trendUp", "green"],
-    "弱材料 / 注意材料": ["trendDown", "orange"],
-    "弱材料": ["trendDown", "orange"],
-    "注意材料": ["alert", "orange"]
-  };
+  const INLINE_ICONS = new Map([
+    ["\u5f53\u305f\u3063\u305f\u70b9", ["checkCircle", "green"]],
+    ["\u5916\u308c\u305f\u70b9", ["xCircle", "red"]],
+    ["\u6b21\u56de\u306b\u6d3b\u304b\u3059\u70b9", ["lightbulb", "green"]],
+    ["\u5f37\u6750\u6599", ["trendUp", "green"]],
+    ["\u5f31\u6750\u6599 / \u6ce8\u610f\u6750\u6599", ["trendDown", "orange"]],
+    ["\u5f31\u6750\u6599", ["trendDown", "orange"]],
+    ["\u6ce8\u610f\u6750\u6599", ["alert", "orange"]]
+  ]);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start);
@@ -73,30 +73,30 @@
     const timer = window.setInterval(() => {
       applyIconFix();
       ticks += 1;
-      if (ticks >= 30) window.clearInterval(timer);
-    }, 1000);
+      if (ticks >= 90) window.clearInterval(timer);
+    }, 500);
 
     let pending = 0;
     const observer = new MutationObserver(() => {
       window.clearTimeout(pending);
-      pending = window.setTimeout(applyIconFix, 80);
+      pending = window.setTimeout(applyIconFix, 50);
     });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 
   function applyIconFix() {
     document.querySelectorAll(".card").forEach((card) => {
-      const heading = card.querySelector("h2")?.textContent?.trim();
-      if (!heading || !CARD_ICONS[heading]) return;
-      const [icon, tone] = CARD_ICONS[heading];
-      replaceHeaderIcon(card.querySelector(".card-header"), icon, tone);
+      const heading = normalize(card.querySelector("h2")?.textContent);
+      const spec = CARD_ICONS.get(heading);
+      if (!spec) return;
+      replaceHeaderIcon(card.querySelector(".card-header"), spec[0], spec[1]);
     });
 
-    document.querySelectorAll(".reflection-title, .brush-material-column").forEach((container) => {
-      const heading = container.querySelector("h3")?.textContent?.trim();
-      if (!heading || !INLINE_ICONS[heading]) return;
-      const [icon, tone] = INLINE_ICONS[heading];
-      replaceHeaderIcon(container, icon, tone, "small");
+    document.querySelectorAll(".reflection-title, .brush-material-column, .individual-material-column").forEach((container) => {
+      const heading = normalize(container.querySelector("h3")?.textContent);
+      const spec = INLINE_ICONS.get(heading);
+      if (!spec) return;
+      replaceHeaderIcon(container, spec[0], spec[1], "small");
     });
   }
 
@@ -119,5 +119,9 @@
     span.dataset.iconName = icon;
     span.innerHTML = `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${icons[icon] || icons.check || ""}</svg>`;
     return span;
+  }
+
+  function normalize(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
   }
 })();
