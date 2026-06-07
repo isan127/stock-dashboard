@@ -94,7 +94,7 @@
           <strong class="summary-name">${escapeHtml(valueOrDash(name))}</strong>
           <div class="summary-meta">
             ${renderBadge(`${label("match")}\uff1a${valueOrDash(matchLevel)}`, matchTone(matchLevel))}
-            ${renderBadge(valueOrDash(policy), conclusionTone(policy))}
+            ${renderBadge(shortDecision(policy), conclusionTone(policy))}
           </div>
           <p class="summary-note">${escapeHtml(valueOrDash(actualMove))}</p>
           ${hasValue(range) ? `<p class="summary-subnote">${escapeHtml(range)}</p>` : ""}
@@ -111,7 +111,7 @@
         <div class="summary-main">
           <div class="summary-heading-line">
             <strong class="summary-name">${escapeHtml(valueOrDash(name))}</strong>
-            ${renderBadge(valueOrDash(nextPolicy), conclusionTone(nextPolicy))}
+            ${renderBadge(shortDecision(nextPolicy), conclusionTone(nextPolicy))}
           </div>
           <div class="summary-meta">
             ${hasValue(monthlyTrend) ? `<span class="summary-subnote">${label("monthlyTrend")}\uff1a${escapeHtml(monthlyTrend)}</span>` : ""}
@@ -127,6 +127,11 @@
   function renderBadge(text, tone) {
     if (!hasValue(text)) return "";
     return `<span class="summary-badge is-${tone}">${escapeHtml(text)}</span>`;
+  }
+
+  function shortDecision(valueText) {
+    const text = valueOrDash(valueText);
+    return text.split(/[:：。]/)[0].trim() || text;
   }
 
   function getChangeTone(valueText) {
