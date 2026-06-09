@@ -165,10 +165,12 @@
   }
 
   function renderOverallDaily(stocks) {
+    if (!dailyDisplayRows().length) return emptyCard("日次データはまだありません", "calendar");
+
     const summary = dashboardData.summary || {};
     const cautions = cautionStocks(stocks);
     return [
-      conclusionCard(actionText(summary, stocks), read(summary, ["overallPolicy"], overallConclusion(stocks))),
+      conclusionCard(actionText(summary, stocks), read(summary, ["overallPolicy", "全体方針"], overallConclusion(stocks))),
       dailyStockSummary(stocks),
       cautions.length ? tagCard("alert", "要注意銘柄", cautions.map((stock) => stock.name), "red") : "",
       tagCard("info", "主な理由", overallReasons(stocks, summary), "green"),
@@ -179,6 +181,8 @@
 
   function renderOverallWeekly(stocks) {
     const reviews = weeklyReviews();
+    if (!reviews.length) return emptyCard("週次レビューはまだありません", "calendar");
+
     const cautions = weeklyCautionStocks(stocks, reviews);
     return [
       conclusionCard(read(dashboardData.summary, ["needAction", "actionRequired"], "なし"), read(dashboardData.summary, ["overallPolicy"], overallConclusion(stocks))),
@@ -204,12 +208,14 @@
       metricCard("calendarMonth", "月間サマリー", monthlySummaryRows(reviews)),
       tagCard("info", "主な理由", reviewReasons(reviews), "green"),
       tagCard("eye", "来月見るポイント", nextWatchPoints(stocks, reviews, "monthly"), "green"),
-      tagCard("alert", "方針変更トリガー", reviews.flatMap((review) => list(read(review, ["policyTriggers", "triggers"], ""))), "orange"),
+      tagCard("alert", "方針変更トリガー", reviews.flatMap((review) => list(read(review, ["policyTriggers", "triggers", "方針変更トリガー"], ""))), "orange"),
       nextPolicyCard("flag", "来月方針", reviews.map((review) => nextPolicy(review, "monthly")))
     ].filter(Boolean).join("");
   }
 
   function renderIndividualDaily(stock) {
+    if (!dailyDisplayRowForStock(stock)) return stockHeader(stock) + emptyCard("日次データはまだありません", "calendar");
+
     return [
       stockHeader(stock),
       conclusionCard(actionRequired(stock), conclusion(stock)),
@@ -219,7 +225,7 @@
       newsCard(stock),
       tagCard("eye", "今後見るポイント", list(stock.watchPoints), "green"),
       tagCard("alert", "方針変更トリガー", list(stock.policyTriggers || stock.triggers), "orange"),
-      infoCard("clock", "最短見通し", read(stock, ["shortOutlook", "shortTermView"], ""))
+      infoCard("clock", "最短見通し", read(stock, ["shortOutlook", "shortTermView", "最短見通し"], ""))
     ].filter(Boolean).join("");
   }
 
@@ -230,15 +236,15 @@
       stockHeader(stock),
       conclusionCard(read(review, ["actionRequired", "needAction"], actionRequired(stock)), read(review, ["conclusion"], nextPolicy(review, "weekly") || conclusion(stock))),
       metricCard("calendar", "週次サマリー", [
-        ["対象週", read(review, ["week"], "")],
-        ["想定レンジ", rangeText(read(review, ["forecastRange"], ""), read(review, ["forecastRangeLow"], ""), read(review, ["forecastRangeHigh"], ""))],
+        ["対象週", read(review, ["week", "週"], "")],
+        ["想定レンジ", rangeText(read(review, ["forecastRange", "想定レンジ"], ""), read(review, ["forecastRangeLow", "想定レンジ下限"], ""), read(review, ["forecastRangeHigh", "想定レンジ上限"], ""))],
         ["実際の値動き", actualMove(review)],
         ["来週方針", nextPolicy(review, "weekly") || conclusion(stock)]
       ]),
       reviewCard("target", "今週の予想・結果", [review], "weekly"),
       tagCard("info", "主な理由", fallbackList(reviewReasons([review]), [stock.oneLine, stock.summaryComment, stock.todayJudgement]), "green"),
       tagCard("eye", "来週見るポイント", nextWatchPoints([stock], [review], "weekly"), "green"),
-      tagCard("alert", "方針変更トリガー", fallbackList(read(review, ["policyTriggers", "triggers"], ""), stock.policyTriggers || stock.triggers), "orange"),
+      tagCard("alert", "方針変更トリガー", fallbackList(read(review, ["policyTriggers", "triggers", "方針変更トリガー"], ""), stock.policyTriggers || stock.triggers), "orange"),
       infoCard("flag", "来週方針", nextPolicy(review, "weekly") || conclusion(stock))
     ].filter(Boolean).join("");
   }
@@ -250,7 +256,7 @@
       stockHeader(stock),
       conclusionCard(read(review, ["actionRequired", "needAction"], actionRequired(stock)), read(review, ["conclusion"], nextPolicy(review, "monthly") || conclusion(stock))),
       metricCard("calendarMonth", "月間サマリー", [
-        ["対象月", read(review, ["month", "targetMonth"], "")],
+        ["対象月", read(review, ["month", "targetMonth", "対象月"], "")],
         ["実際の値動き", actualMove(review)],
         ["来月方針", nextPolicy(review, "monthly")]
       ]),
@@ -258,7 +264,7 @@
       tagCard("info", "主な理由", reviewReasons([review]), "green"),
       materialsCard(review),
       tagCard("eye", "来月見るポイント", nextWatchPoints([stock], [review], "monthly"), "green"),
-      tagCard("alert", "方針変更トリガー", list(read(review, ["policyTriggers", "triggers"], "")), "orange"),
+      tagCard("alert", "方針変更トリガー", list(read(review, ["policyTriggers", "triggers", "方針変更トリガー"], "")), "orange"),
       infoCard("flag", "来月方針", nextPolicy(review, "monthly"))
     ].filter(Boolean).join("");
   }
@@ -355,9 +361,9 @@
         [type === "monthly" ? "見立て" : "今週の予想", forecastText(review, type)],
         ["実際の値動き", actualMove(review)],
         ["一致度", matchLevel(review)],
-        ["当たった点", read(review, ["matchedPoints"], "")],
-        ["外れた点", read(review, ["missedPoints"], "")],
-        ["次回に活かす点", read(review, ["nextImprovement"], "")]
+        ["当たった点", read(review, ["matchedPoints", "hitPoints", "当たった点"], "")],
+        ["外れた点", read(review, ["missedPoints", "外れた点"], "")],
+        ["次回に活かす点", read(review, ["nextImprovement", "nextImprovePoints", "次回に活かす点"], "")]
       ].filter(([, value]) => hasValue(value));
       if (!rows.length) return "";
       return `<div class="reflection-block">${hasValue(reviewName(review)) ? `<h3>${escapeHtml(reviewName(review))}</h3>` : ""}<div class="metric-grid">${rows.map(([label, value]) => metric(label, value)).join("")}</div></div>`;
@@ -480,6 +486,15 @@
     return Array.isArray(dashboardData?.stocks) ? dashboardData.stocks.filter(Boolean) : [];
   }
 
+  function dailyDisplayRows() {
+    const rows = Array.isArray(dashboardData?.dailyDisplayData) ? dashboardData.dailyDisplayData : [];
+    return rows.filter(isRenderableDailyRow);
+  }
+
+  function dailyDisplayRowForStock(stock) {
+    return dailyDisplayRows().find((row) => sameRowStock(row, stock));
+  }
+
   function weeklyReviews() {
     return normalizeReviews(dashboardData?.weeklyReviews || []);
   }
@@ -490,13 +505,16 @@
 
   function normalizeReviews(raw) {
     const rows = Array.isArray(raw) ? raw : raw ? [raw] : [];
-    return rows.filter((review) => review && [
-      reviewName(review),
+    return rows.filter((review) => review && reviewHasIdentity(review) && [
+      read(review, ["actionRequired", "needAction"], ""),
+      read(review, ["conclusion"], ""),
+      forecastText(review, "weekly"),
+      forecastText(review, "monthly"),
       actualMove(review),
       matchLevel(review),
       nextPolicy(review, "weekly"),
       nextPolicy(review, "monthly")
-    ].some(hasValue));
+    ].some(isMeaningfulDataValue));
   }
 
   function reviewForStock(reviews, stock) {
@@ -505,6 +523,31 @@
       const name = reviewName(review);
       return (stock.code && String(code) === String(stock.code)) || (stock.name && name === stock.name);
     });
+  }
+
+  function isRenderableDailyRow(row) {
+    if (!row || typeof row !== "object") return false;
+    const values = Object.values(row);
+    const hasIdentity = [
+      read(row, ["name", "stockName", "銘柄名"], ""),
+      read(row, ["code", "証券コード"], ""),
+      values[2],
+      values[3]
+    ].some(isMeaningfulDataValue);
+    const hasDisplayData = values.slice(4, 30).some(isMeaningfulDataValue);
+    return hasIdentity && hasDisplayData;
+  }
+
+  function sameRowStock(row, stock) {
+    if (!row || !stock) return false;
+    const values = Object.values(row).map((value) => String(value ?? "").trim());
+    const rowCode = read(row, ["code", "証券コード"], "") || values[3] || "";
+    const rowName = read(row, ["name", "stockName", "銘柄名"], "") || values[2] || "";
+    return (stock.code && String(rowCode) === String(stock.code)) || (stock.name && rowName === stock.name);
+  }
+
+  function reviewHasIdentity(review) {
+    return [read(review, ["code", "証券コード"], ""), reviewName(review)].some(isMeaningfulDataValue);
   }
 
   function sameStock(stock, key) {
@@ -563,7 +606,7 @@
 
   function monthlySummaryRows(reviews) {
     return [
-      ["対象月", reviews.map((review) => read(review, ["month", "targetMonth"], "")).filter(hasValue).join(" / ")],
+      ["対象月", reviews.map((review) => read(review, ["month", "targetMonth", "対象月"], "")).filter(hasValue).join(" / ")],
       ["実際の値動き", reviews.map(actualMove).filter(hasValue).join(" / ")],
       ["来月方針", reviews.map((review) => nextPolicy(review, "monthly")).filter(hasValue).join(" / ")]
     ];
@@ -690,6 +733,17 @@
     if (Array.isArray(value)) return value.length > 0;
     const raw = String(value).trim();
     return Boolean(raw && raw !== "---" && raw !== "--" && raw !== "未入力" && raw !== "undefined");
+  }
+
+  function isMeaningfulDataValue(value) {
+    if (!hasValue(value)) return false;
+    const raw = String(value).trim();
+    return ![
+      "未設定",
+      "なし",
+      "日次表示データは未入力です。",
+      "日次表示データを確認してください。"
+    ].includes(raw);
   }
 
   function valueOrDash(value) {
