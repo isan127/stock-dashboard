@@ -185,10 +185,10 @@
       weeklyStockSummary(stocks, reviews, "来週方針"),
       cautions.length ? tagCard("alert", "要注意銘柄", cautions.map((stock) => stock.name), "red") : "",
       reviews.length ? reviewCard("target", "今週の予想・答え合わせ", reviews, "weekly") : emptyCard("週次レビューはまだありません", "target"),
-      tagCard("info", "主な理由", reviewReasons(reviews), "green"),
+      tagCard("info", "主な理由", weeklyReasons(stocks, reviews), "green"),
       tagCard("eye", "来週見るポイント", nextWatchPoints(stocks, reviews, "weekly"), "green"),
       tagCard("alert", "方針変更トリガー", stocks.flatMap((stock) => list(stock.policyTriggers || stock.triggers)), "orange"),
-      nextPolicyCard("flag", "来週方針", reviews.map((review) => nextPolicy(review, "weekly")))
+      nextPolicyCard("flag", "来週方針", fallbackList(reviews.map((review) => nextPolicy(review, "weekly")), stocks.map(conclusion)))
     ].filter(Boolean).join("");
   }
 
@@ -233,13 +233,13 @@
         ["対象週", read(review, ["week", "週"], "")],
         ["想定レンジ", rangeText(read(review, ["forecastRange", "想定レンジ"], ""), read(review, ["forecastRangeLow", "想定レンジ下限"], ""), read(review, ["forecastRangeHigh", "想定レンジ上限"], ""))],
         ["実際の値動き", actualMove(review)],
-        ["来週方針", nextPolicy(review, "weekly")]
+        ["来週方針", nextPolicy(review, "weekly") || conclusion(stock)]
       ]),
       reviewCard("target", "今週の予想・答え合わせ", [review], "weekly"),
-      tagCard("info", "主な理由", reviewReasons([review]), "green"),
+      tagCard("info", "主な理由", fallbackList(reviewReasons([review]), [stock.oneLine, stock.summaryComment, stock.todayJudgement]), "green"),
       tagCard("eye", "来週見るポイント", nextWatchPoints([stock], [review], "weekly"), "green"),
       tagCard("alert", "方針変更トリガー", fallbackList(read(review, ["policyTriggers", "triggers", "方針変更トリガー"], ""), stock.policyTriggers || stock.triggers), "orange"),
-      infoCard("flag", "来週方針", nextPolicy(review, "weekly"))
+      infoCard("flag", "来週方針", nextPolicy(review, "weekly") || conclusion(stock))
     ].filter(Boolean).join("");
   }
 
@@ -318,7 +318,7 @@
               ${summaryBadge(nextPolicy(review, "weekly") || conclusion(stock))}
             </div>
             <p class="summary-note">${escapeHtml(valueOrDash(actualMove(review)))}</p>
-            <p class="summary-subnote">${escapeHtml(policyLabel)}：${escapeHtml(valueOrDash(nextPolicy(review, "weekly")))}</p>
+            <p class="summary-subnote">${escapeHtml(policyLabel)}：${escapeHtml(valueOrDash(nextPolicy(review, "weekly") || conclusion(stock)))}</p>
           </div>
         </article>
       `;
@@ -551,6 +551,10 @@
 
   function reviewReasons(reviews) {
     return reviews.flatMap((review) => list(read(review, ["mainReasons", "reason", "matchedPoints", "missedPoints", "主な理由", "当たった点", "外れた点"], "")));
+  }
+
+  function weeklyReasons(stocks, reviews) {
+    return fallbackList(reviewReasons(reviews), stocks.map((stock) => stock.oneLine || stock.summaryComment || stock.newsTrend));
   }
 
   function nextWatchPoints(stocks, reviews, type) {
