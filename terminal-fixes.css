@@ -11,6 +11,44 @@
   overflow-wrap: anywhere;
 }
 
+.summary-row--weekly {
+  display: block;
+  padding: 14px 14px 13px;
+}
+
+.summary-row--weekly .summary-main {
+  display: grid;
+  gap: 10px;
+}
+
+.summary-row--weekly .summary-name {
+  display: block;
+  line-height: 1.45;
+  margin: 0 0 2px;
+}
+
+.summary-row--weekly .summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.summary-row--weekly .summary-note,
+.summary-row--weekly .summary-subnote {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.reflection-block {
+  padding: 14px;
+}
+
+.reflection-block h3 {
+  margin: 0 0 12px;
+  line-height: 1.45;
+  color: #F3FDFF;
+}
+
 .terminal-daily-values {
   min-width: min(100%, 288px);
 }
