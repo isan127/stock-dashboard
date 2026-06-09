@@ -1,4 +1,4 @@
-# 保有株チェックダッシュボード
+# StockScope-Lite
 
 ChatGPTタスクでTSVを作成し、Googleスプレッドシートへ手動貼り付けした内容を、Apps Script経由のRemote JSONとしてGitHub Pagesに表示する半自動運用のダッシュボードです。
 
